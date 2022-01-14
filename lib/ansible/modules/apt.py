@@ -38,6 +38,12 @@ options:
       - Default is not to update the cache.
     aliases: [ update-cache ]
     type: bool
+  allow_releaseinfo_change:
+    description:
+      - Usable in conjunction with update_cache, so that update does not fail when the origin was renamed
+      - Default is not to allow release info change
+    aliases: [allow-releaseinfo-change]
+    type: bool
   update_cache_retries:
     description:
       - Amount of retries if the cache update fails. Also see I(update_cache_retry_max_delay).
@@ -1129,6 +1135,7 @@ def main():
             allow_downgrade=dict(type='bool', default=False, aliases=['allow-downgrade', 'allow_downgrades', 'allow-downgrades']),
             allow_change_held_packages=dict(type='bool', default=False),
             lock_timeout=dict(type='int', default=60),
+            allow_releaseinfo_change=dict(type='bool', default=False, aliases=['allow-releaseinfo-change'])
         ),
         mutually_exclusive=[['deb', 'package', 'upgrade']],
         required_one_of=[['autoremove', 'deb', 'package', 'update_cache', 'upgrade']],
@@ -1187,8 +1194,11 @@ def main():
         if module.params.get('update_cache') is False:
             module.warn("Auto-installing missing dependency without updating cache: %s" % apt_pkg_name)
         else:
+            command = ['apt-get', 'update']
+            if module.params.get('allow_releaseinfo_change') is True:
+                command.append('--allow-releaseinfo-change')
             module.warn("Updating cache and auto-installing missing dependency: %s" % apt_pkg_name)
-            module.run_command(['apt-get', 'update'], check_rc=True)
+            module.run_command(command, check_rc=True)
 
         # try to install the apt Python binding
         module.run_command(['apt-get', 'install', '--no-install-recommends', apt_pkg_name, '-y', '-q'], check_rc=True)
